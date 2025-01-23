@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Somerset Shrimp - Checkout</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        :root {
+            --primary-color: #2C3E50;
+            --accent-color: #3498DB;
+            --light-bg: #ECF0F1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background-color: var(--primary-color);
+            padding: 1rem;
+        }
+
+        .navbar-brand {
+            color: white !important;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-decoration: none;
+        }
+
+        .checkout-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        #card-element {
+            padding: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            background: white;
+        }
+
+        #card-errors {
+            color: #dc3545;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .order-summary {
+            background: var(--light-bg);
+            padding: 1.5rem;
+            border-radius: 0.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quantity-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .quantity-btn:hover {
+            background: #2980b9;
+        }
+
+        .empty-cart {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .item-details {
+            flex-grow: 1;
+            margin-right: 1rem;
+        }
+
+        .remove-item {
+            color: #dc3545;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+
+        .remove-item:hover {
+            color: #bd2130;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">Somerset Shrimp</a>
+        </div>
+    </nav>
+
+    <!-- Checkout Form -->
+    <div class="container">
+        <div class="checkout-container">
+            <h2 class="mb-4">Checkout</h2>
+            
+            <!-- Order Summary -->
+            <div class="order-summary">
+                <h4>Order Summary</h4>
+                <div id="order-items">
+                    <!-- Order items will be populated by JavaScript -->
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Total:</strong>
+                    <span id="order-total">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Checkout Form -->
+            <form id="payment-form">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="email" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="name" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="address" class="form-label">Shipping Address</label>
+                    <textarea class="form-control" id="address" rows="3" required></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="card-element" class="form-label">
+                        Credit or Debit Card
+                    </label>
+                    <div id="card-element">
+                        <!-- Stripe Card Element will be inserted here -->
+                    </div>
+                    <div id="card-errors" role="alert"></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    Complete Purchase
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Initialize Stripe
+        const stripe = Stripe('your_publishable_key'); // Replace with your actual publishable key
+        const elements = stripe.elements();
+        const card = elements.create('card');
+        card.mount('#card-element');
+
+        // Handle form submission
+        const form = document.getElementById('payment-form');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (cart.items.length === 0) {
+                alert('Your cart is empty');
+                return;
+            }
+
+            const { token, error } = await stripe.createToken(card);
+
+            if (error) {
+                const errorElement = document.getElementById('card-errors');
+                errorElement.textContent = error.message;
+            } else {
+                const response = await fetch('/charge', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: token.id,
+                        email: document.getElementById('email').value,
+                        name: document.getElementById('name').value,
+                        address: document.getElementById('address').value,
+                        items: cart.items,
+                        total: cart.calculateTotal()
+                    })
+                });
+
+                if (response.ok) {
+                    cart.clearCart();
+                    window.location.href = '/confirmation.html';
+                } else {
+                    const errorElement = document.getElementById('card-errors');
+                    errorElement.textContent = 'An error occurred while processing your payment.';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
